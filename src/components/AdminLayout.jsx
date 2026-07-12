@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { LayoutDashboard, Globe, FileText, LogOut, Search } from 'lucide-react';
+import { LayoutDashboard, Globe, FileText, LogOut, Search, MessageCircle } from 'lucide-react';
 import { api } from '../lib/api.js';
 
 const linkClass = ({ isActive }) =>
@@ -39,6 +39,9 @@ export default function AdminLayout() {
           </NavLink>
           <NavLink to="/admin/pages" className={linkClass}>
             <FileText size={18} /> Halaman Terindeks
+          </NavLink>
+          <NavLink to="/admin/settings" className={linkClass}>
+            <MessageCircle size={18} /> Pengaturan Kontak
           </NavLink>
           <Link
             to="/"

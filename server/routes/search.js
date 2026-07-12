@@ -1,7 +1,19 @@
 import { Router } from 'express';
 import { pagesIndex } from '../meili.js';
+import { getSettings } from '../settings.js';
 
 const router = Router();
+
+// GET /api/settings — pengaturan kontak publik (WA & Live Chat) untuk homepage.
+router.get('/settings', (req, res) => {
+  const s = getSettings();
+  // Hanya paparkan field yang aman untuk publik.
+  res.json({
+    whatsappNumber: s.whatsappNumber,
+    whatsappMessage: s.whatsappMessage,
+    liveChatUrl: s.liveChatUrl,
+  });
+});
 
 // GET /api/search?q=&page=&perPage=
 // Public web search across crawled pages, with cropped + highlighted snippets.

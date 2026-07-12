@@ -30,9 +30,24 @@ export function hostOf(url) {
   }
 }
 
+// Bangun URL WhatsApp dari nomor + pesan opsional. Kosong bila nomor kosong.
+export function waLink(number, message = '') {
+  const n = String(number || '').replace(/[^\d]/g, '');
+  if (!n) return '';
+  const q = message ? `?text=${encodeURIComponent(message)}` : '';
+  return `https://wa.me/${n}${q}`;
+}
+
 export const api = {
   // public web search
   search: (params) => req(`/search?${new URLSearchParams(params)}`),
+
+  // pengaturan kontak publik (WA & Live Chat)
+  settings: () => req('/settings'),
+  // pengaturan kontak (admin)
+  adminSettings: () => req('/admin/settings'),
+  updateSettings: (body) =>
+    req('/admin/settings', { method: 'PUT', body: JSON.stringify(body) }),
 
   // auth
   login: (body) => req('/admin/login', { method: 'POST', body: JSON.stringify(body) }),

@@ -4,5 +4,6 @@ dist
 *.log
 data.ms
 meili_data
+data/settings.json
 
 meilisearch.exe
