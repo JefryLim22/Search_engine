@@ -93,6 +93,75 @@ body::after {
     @apply border-[#dadce0] shadow-sm;
     color: #202124;
   }
+
+  /* ---------- Apple-style contact buttons (Live Chat / WhatsApp) ---------- */
+  .ac-btn {
+    --ac-accent: #0071e3;
+    --ac-accent-hi: #3a94ff;
+    --ac-shadow: rgba(0, 113, 227, 0.32);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    height: 46px;
+    padding: 0 1.35rem 0 0.7rem;
+    border-radius: 9999px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    background-image: linear-gradient(180deg, var(--ac-accent-hi) 0%, var(--ac-accent) 100%);
+    box-shadow:
+      0 1px 1px rgba(0, 0, 0, 0.04),
+      0 6px 16px -6px var(--ac-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      filter 0.28s ease;
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ac-btn:hover {
+    transform: translateY(-1.5px);
+    filter: saturate(1.05);
+    box-shadow:
+      0 1px 1px rgba(0, 0, 0, 0.04),
+      0 14px 28px -10px var(--ac-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  }
+  .ac-btn:active {
+    transform: translateY(0) scale(0.975);
+    transition-duration: 0.08s;
+  }
+  .ac-btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.9),
+      0 0 0 5px var(--ac-accent),
+      0 10px 24px -10px var(--ac-shadow);
+  }
+  .ac-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.22);
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.25);
+  }
+  .ac-btn__label {
+    line-height: 1;
+  }
+
+  /* WhatsApp variant — hijau brand */
+  .ac-btn--wa {
+    --ac-accent: #17b955;
+    --ac-accent-hi: #35d47a;
+    --ac-shadow: rgba(23, 185, 85, 0.34);
+  }
 }
 
 mark {

@@ -6,6 +6,7 @@ import {
   requireAuth,
 } from '../auth.js';
 import { pagesIndex } from '../meili.js';
+import { getSettings, saveSettings } from '../settings.js';
 
 const router = Router();
 
@@ -35,6 +36,21 @@ router.get('/stats', requireAuth, async (req, res) => {
   try {
     const stats = await pagesIndex().getStats();
     res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/settings — baca pengaturan kontak (untuk form admin)
+router.get('/settings', requireAuth, (req, res) => {
+  res.json(getSettings());
+});
+
+// PUT /api/admin/settings — simpan pengaturan kontak
+router.put('/settings', requireAuth, (req, res) => {
+  try {
+    const saved = saveSettings(req.body || {});
+    res.json(saved);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
