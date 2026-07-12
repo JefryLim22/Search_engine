@@ -7,13 +7,10 @@ import { api, hostOf } from '../lib/api.js';
    Tambah/kurangi di sini sesuka hati. */
 const RECOMMENDED = [
   'AZGAMING388',
-  'BEERSLOT365',
   'AZGAMING388 login',
-  'BEERSLOT365 login',
   'AZGAMING388 daftar',
-  'BEERSLOT365 daftar',
   'AZGAMING388 link alternatif',
-  'BEERSLOT365 rtp',
+  'AZGAMING388 rtp',
 ];
 
 export default function Search() {
