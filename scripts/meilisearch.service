@@ -1,0 +1,25 @@
+# systemd service untuk Meilisearch (produksi).
+# Pasang:
+#   sudo cp scripts/meilisearch.service /etc/systemd/system/
+#   sudo nano /etc/systemd/system/meilisearch.service   # ganti MEILI_MASTER_KEY
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now meilisearch
+#
+[Unit]
+Description=Meilisearch
+After=network.target
+
+[Service]
+Type=simple
+# Dengarkan HANYA di localhost — jangan ekspos ke publik.
+Environment=MEILI_HTTP_ADDR=127.0.0.1:7700
+Environment=MEILI_ENV=production
+# WAJIB ganti dengan key panjang & acak yang SAMA dengan .env (MEILI_MASTER_KEY).
+Environment=MEILI_MASTER_KEY=GANTI-DENGAN-KEY-PANJANG-ACAK
+ExecStart=/usr/local/bin/meilisearch --db-path /www/meili_data/data.ms
+Restart=on-failure
+RestartSec=5
+WorkingDirectory=/www/meili_data
+
+[Install]
+WantedBy=multi-user.target

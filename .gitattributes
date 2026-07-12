@@ -1,0 +1,6 @@
+# Paksa LF untuk file yang dijalankan di server Linux — CRLF bikin
+# shebang gagal ("bad interpreter") & systemd tidak mau parse.
+*.sh            text eol=lf
+*.service       text eol=lf
+deploy.sh       text eol=lf
+ecosystem.config.cjs text eol=lf
