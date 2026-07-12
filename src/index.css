@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply text-slate-100 antialiased;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: radial-gradient(125% 125% at 50% 0%, #131a2b 0%, #0a0e1a 45%, #060912 100%);
+  overflow-x: hidden;
+}
+
+/* Animated aurora / liquid light behind everything */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -25%;
+  z-index: -2;
+  background:
+    radial-gradient(38% 38% at 18% 22%, rgba(99, 102, 241, 0.4), transparent 62%),
+    radial-gradient(34% 34% at 82% 14%, rgba(217, 70, 239, 0.32), transparent 62%),
+    radial-gradient(42% 42% at 78% 82%, rgba(34, 211, 238, 0.26), transparent 62%),
+    radial-gradient(40% 40% at 12% 86%, rgba(139, 92, 246, 0.3), transparent 62%);
+  filter: blur(70px) saturate(140%);
+  animation: drift 20s ease-in-out infinite alternate;
+}
+
+/* Faint grid overlay for depth */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(circle at 50% 25%, black, transparent 80%);
+  mask-image: radial-gradient(circle at 50% 25%, black, transparent 80%);
+  pointer-events: none;
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl border border-white/10 bg-white/[0.055] backdrop-blur-xl;
+    box-shadow:
+      0 10px 40px -12px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .glass-inset {
+    @apply rounded-xl border border-white/10 bg-black/30 backdrop-blur-md;
+  }
+  .brand-gradient {
+    @apply bg-gradient-to-r from-indigo-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent;
+  }
+  .field {
+    @apply w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100
+           placeholder:text-slate-500 outline-none transition
+           focus:border-indigo-400/50 focus:bg-white/[0.08] focus:ring-2 focus:ring-indigo-500/25;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium
+           transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn text-white shadow-lg shadow-indigo-900/40;
+    background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 45%, #d946ef 100%);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10;
+  }
+  .btn-danger {
+    @apply btn border border-red-400/20 bg-red-500/10 text-red-300 hover:bg-red-500/20;
+  }
+  /* Google-style gray button (homepage) */
+  .g-btn {
+    @apply rounded border border-transparent bg-[#f8f9fa] px-4 py-2 text-sm text-[#3c4043] transition;
+    height: 36px;
+  }
+  .g-btn:hover {
+    @apply border-[#dadce0] shadow-sm;
+    color: #202124;
+  }
+}
+
+mark {
+  @apply rounded-[3px] px-0.5 text-indigo-200;
+  background: rgba(129, 140, 248, 0.22);
+}
+
+/* --- Google-style light theme for the public search page (.g-root) --- */
+.g-root {
+  color-scheme: light;
+}
+.g-root ::selection {
+  background: #b3d4fc;
+}
+/* matched terms shown bold (no highlight), ala Google */
+.g-root mark {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-weight: 700;
+}
+.g-root *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.28);
+  background-clip: content-box;
+}
+
+/* Dark scrollbars */
+* {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+  background-clip: content-box;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(0, -4%, 0) scale(1.12);
+  }
+}

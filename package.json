@@ -1,0 +1,42 @@
+{
+  "name": "aman365",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev:api": "nodemon server/index.js",
+    "dev:web": "vite",
+    "dev": "concurrently -k -n api,web -c yellow,cyan \"npm run dev:api\" \"npm run dev:web\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.2.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "meilisearch": "^0.44.1",
+    "multer": "^2.0.1"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.66.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "lucide-react": "^0.479.0",
+    "nodemon": "^3.1.9",
+    "postcss": "^8.5.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.1.5",
+    "tailwindcss": "^3.4.17",
+    "vite": "^5.4.14"
+  }
+}

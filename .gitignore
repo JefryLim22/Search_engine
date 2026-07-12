@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.log
+data.ms
+meili_data
+
+meilisearch.exe
