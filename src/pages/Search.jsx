@@ -91,10 +91,20 @@ export default function Search() {
               </button>
             </div>
           </form>
+
+          <div className="mt-4 flex justify-center">
+            <a
+              href="https://direct.lc.chat/14863773"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="g-btn"
+            >
+              Live Chat AMAN365
+            </a>
+          </div>
         </div>
 
         <Footer />
-        <LiveChatButton />
       </div>
     );
   }
@@ -449,47 +459,6 @@ function Footer({ serp = false }) {
         </div>
       </div>
     </footer>
-  );
-}
-
-/* ---------------- Tombol Live Chat mengambang ---------------- */
-function LiveChatButton() {
-  return (
-    <a
-      href="https://direct.lc.chat/14863773"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Buka Live Chat"
-      className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#34A853] py-3 pl-3.5 pr-5 text-white shadow-[0_4px_14px_rgba(26,115,232,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(26,115,232,0.55)] active:translate-y-0 sm:bottom-6 sm:right-6"
-      style={{ fontFamily: 'Arial, sans-serif' }}
-    >
-      {/* ikon chat dalam lingkaran + titik online berdenyut */}
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
-        <ChatIcon />
-        <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#34ff8f] opacity-75" />
-          <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-[#1a73e8] bg-[#34ff8f]" />
-        </span>
-      </span>
-      <span className="flex flex-col leading-tight">
-        <span className="text-[15px] font-semibold">Live Chat</span>
-        <span className="text-[11px] font-medium text-white/80">Online 24 Jam</span>
-      </span>
-    </a>
-  );
-}
-
-function ChatIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8l-4 4V5a1 1 0 0 1 1-1Z"
-        fill="currentColor"
-      />
-      <circle cx="8.5" cy="10.5" r="1.3" fill="#1a73e8" />
-      <circle cx="12" cy="10.5" r="1.3" fill="#1a73e8" />
-      <circle cx="15.5" cy="10.5" r="1.3" fill="#1a73e8" />
-    </svg>
   );
 }
 
