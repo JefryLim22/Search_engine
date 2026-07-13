@@ -170,11 +170,11 @@ body::after {
     --ac-shadow: rgba(34, 158, 217, 0.34);
   }
 
-  /* Live Chat / Link variant — biru default (Apple-blue) */
+  /* Live Chat / Link variant — merah gaya Apple */
   .ac-btn--chat {
-    --ac-accent: #0071e3;
-    --ac-accent-hi: #3a94ff;
-    --ac-shadow: rgba(0, 113, 227, 0.32);
+    --ac-accent: #ff3b30;
+    --ac-accent-hi: #ff6b60;
+    --ac-shadow: rgba(255, 59, 48, 0.34);
   }
 
   /* --- Layout responsif baris tombol kontak ---
