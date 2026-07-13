@@ -169,6 +169,35 @@ body::after {
     --ac-accent-hi: #37bdf0;
     --ac-shadow: rgba(34, 158, 217, 0.34);
   }
+
+  /* Live Chat / Link variant — biru default (Apple-blue) */
+  .ac-btn--chat {
+    --ac-accent: #0071e3;
+    --ac-accent-hi: #3a94ff;
+    --ac-shadow: rgba(0, 113, 227, 0.32);
+  }
+
+  /* --- Layout responsif baris tombol kontak ---
+     Mobile: menumpuk 1 kolom, semua tombol lebar penuh & seragam (rata
+     atas-bawah) agar rapi. ≥640px: mengalir horizontal & menyesuaikan isi. */
+  .ac-btn-row {
+    width: 100%;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .ac-btn-row .ac-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  @media (min-width: 640px) {
+    .ac-btn-row {
+      max-width: none;
+    }
+    .ac-btn-row .ac-btn {
+      width: auto;
+    }
+  }
 }
 
 mark {

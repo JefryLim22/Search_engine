@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { api, hostOf, waLink, tgLink } from '../lib/api.js';
+import { api, hostOf, contactHref } from '../lib/api.js';
 
 /* Rekomendasi keyword yang muncul di search box (autocomplete).
    Tambah/kurangi di sini sesuka hati. */
@@ -453,9 +453,18 @@ function Footer({ serp = false }) {
   );
 }
 
-/* ---------------- Tombol kontak homepage (Live Chat & WhatsApp) ----------------
-   Membaca nomor & link dari /api/settings agar bisa diganti lewat panel admin
-   tanpa deploy ulang. Tombol hanya muncul bila datanya terisi. */
+/* ---------------- Tombol kontak homepage (dinamis) ----------------
+   Membaca daftar kontak dari /api/settings. Admin membuat sendiri tiap kontak
+   (label bebas + jenis WhatsApp/Telegram/Link) lewat panel, jadi bisa diganti
+   tanpa deploy ulang. Tombol hanya muncul bila daftarnya terisi. */
+
+// Peta jenis kontak → ikon & varian warna tombol.
+const CONTACT_STYLE = {
+  whatsapp: { Icon: WhatsAppIcon, variant: 'ac-btn--wa', fallback: 'WhatsApp' },
+  telegram: { Icon: TelegramIcon, variant: 'ac-btn--tg', fallback: 'Telegram' },
+  link: { Icon: ChatBubbleIcon, variant: 'ac-btn--chat', fallback: 'Live Chat' },
+};
+
 function ContactButtons() {
   const { data } = useQuery({
     queryKey: ['public-settings'],
@@ -464,68 +473,37 @@ function ContactButtons() {
     staleTime: 60_000,
   });
 
-  const liveChatUrl =
-    data?.liveChatUrl && /^https?:\/\//i.test(data.liveChatUrl) ? data.liveChatUrl : '';
-  const wa1 = waLink(data?.whatsappNumber, data?.whatsappMessage);
-  const wa2 = waLink(data?.whatsappNumber2, data?.whatsappMessage2);
-  const tg = tgLink(data?.telegramUsername);
+  // Bangun daftar tombol siap-render: {href, label, style}. Buang yang tak valid.
+  const buttons = (data?.contacts || [])
+    .map((c) => {
+      const href = contactHref(c);
+      const style = CONTACT_STYLE[c.type];
+      if (!href || !style) return null;
+      return { id: c.id, href, style, label: (c.label || '').trim() || style.fallback };
+    })
+    .filter(Boolean);
 
-  if (!liveChatUrl && !wa1 && !wa2 && !tg) return null;
+  if (buttons.length === 0) return null;
 
   return (
     <div className="ac-btn-row mt-8 flex flex-wrap items-center justify-center gap-3.5">
-      {liveChatUrl && (
-        <a
-          href={liveChatUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ac-btn ac-btn--chat"
-        >
-          <span className="ac-btn__icon">
-            <ChatBubbleIcon />
-          </span>
-          <span className="ac-btn__label">Live Chat</span>
-        </a>
-      )}
-      {wa1 && (
-        <a
-          href={wa1}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ac-btn ac-btn--wa"
-        >
-          <span className="ac-btn__icon">
-            <WhatsAppIcon />
-          </span>
-          <span className="ac-btn__label">WhatsApp CS 1</span>
-        </a>
-      )}
-      {wa2 && (
-        <a
-          href={wa2}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ac-btn ac-btn--wa"
-        >
-          <span className="ac-btn__icon">
-            <WhatsAppIcon />
-          </span>
-          <span className="ac-btn__label">WhatsApp CS 2</span>
-        </a>
-      )}
-      {tg && (
-        <a
-          href={tg}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ac-btn ac-btn--tg"
-        >
-          <span className="ac-btn__icon">
-            <TelegramIcon />
-          </span>
-          <span className="ac-btn__label">Telegram</span>
-        </a>
-      )}
+      {buttons.map(({ id, href, label, style }) => {
+        const { Icon, variant } = style;
+        return (
+          <a
+            key={id}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`ac-btn ${variant}`}
+          >
+            <span className="ac-btn__icon">
+              <Icon />
+            </span>
+            <span className="ac-btn__label">{label}</span>
+          </a>
+        );
+      })}
     </div>
   );
 }

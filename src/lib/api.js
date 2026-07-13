@@ -48,6 +48,22 @@ export function tgLink(username) {
   return u ? `https://t.me/${u}` : '';
 }
 
+// Bangun URL akhir dari satu objek kontak dinamis { type, value, message }.
+// Kosong bila nilainya tidak valid — pemanggil menyembunyikan tombolnya.
+export function contactHref(c) {
+  if (!c) return '';
+  switch (c.type) {
+    case 'whatsapp':
+      return waLink(c.value, c.message);
+    case 'telegram':
+      return tgLink(c.value);
+    case 'link':
+      return /^https?:\/\//i.test(c.value || '') ? c.value : '';
+    default:
+      return '';
+  }
+}
+
 export const api = {
   // public web search
   search: (params) => req(`/search?${new URLSearchParams(params)}`),

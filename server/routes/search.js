@@ -4,18 +4,11 @@ import { getSettings } from '../settings.js';
 
 const router = Router();
 
-// GET /api/settings — pengaturan kontak publik (WA & Live Chat) untuk homepage.
+// GET /api/settings — daftar kontak publik untuk tombol di homepage.
 router.get('/settings', (req, res) => {
   const s = getSettings();
-  // Hanya paparkan field yang aman untuk publik.
-  res.json({
-    whatsappNumber: s.whatsappNumber,
-    whatsappMessage: s.whatsappMessage,
-    whatsappNumber2: s.whatsappNumber2,
-    whatsappMessage2: s.whatsappMessage2,
-    telegramUsername: s.telegramUsername,
-    liveChatUrl: s.liveChatUrl,
-  });
+  // Seluruh isi kontak aman dipaparkan ke publik (memang tampil di homepage).
+  res.json({ contacts: s.contacts });
 });
 
 // GET /api/search?q=&page=&perPage=

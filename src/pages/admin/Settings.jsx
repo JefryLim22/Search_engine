@@ -1,18 +1,61 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Phone, Send, Save, Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
-import { api, waLink, tgLink } from '../../lib/api.js';
+import {
+  MessageCircle,
+  Phone,
+  Send,
+  Save,
+  Loader2,
+  CheckCircle2,
+  ExternalLink,
+  Plus,
+  Trash2,
+  GripVertical,
+} from 'lucide-react';
+import { api, contactHref } from '../../lib/api.js';
+
+// Definisi jenis kontak untuk form. `value`/`message` cocok dengan sanitasi server.
+const TYPES = {
+  whatsapp: {
+    name: 'WhatsApp',
+    Icon: Phone,
+    accent: 'bg-emerald-500/15 text-emerald-300',
+    link: 'text-emerald-300',
+    valueLabel: 'Nomor WhatsApp',
+    placeholder: 'Contoh: 6281234567890',
+    hint: 'Format internasional tanpa tanda “+”. Awali kode negara (Indonesia: 62).',
+    hasMessage: true,
+  },
+  telegram: {
+    name: 'Telegram',
+    Icon: Send,
+    accent: 'bg-sky-500/15 text-sky-300',
+    link: 'text-sky-300',
+    valueLabel: 'Username Telegram',
+    placeholder: 'aman365cs',
+    hint: 'Cukup username tanpa “@” (mis. aman365cs). Otomatis jadi t.me/username.',
+    hasMessage: false,
+  },
+  link: {
+    name: 'Live Chat / Link',
+    Icon: MessageCircle,
+    accent: 'bg-indigo-500/15 text-indigo-300',
+    link: 'text-indigo-300',
+    valueLabel: 'URL tautan',
+    placeholder: 'https://direct.lc.chat/14863773',
+    hint: 'Tempel URL lengkap (harus diawali http:// atau https://). Cocok untuk Live Chat, LINE, dsb.',
+    hasMessage: false,
+  },
+};
+
+// ID sementara untuk key React pada kontak baru (server memberi ID final saat simpan).
+function tempId() {
+  return 'new-' + Math.random().toString(36).slice(2, 9);
+}
 
 export default function Settings() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({
-    whatsappNumber: '',
-    whatsappMessage: '',
-    whatsappNumber2: '',
-    whatsappMessage2: '',
-    telegramUsername: '',
-    liveChatUrl: '',
-  });
+  const [contacts, setContacts] = useState([]);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,17 +65,18 @@ export default function Settings() {
     retry: false,
   });
 
-  // Isi form saat data pertama kali termuat.
+  // Isi form saat data pertama kali termuat (atau setelah simpan).
   useEffect(() => {
-    if (data) {
-      setForm({
-        whatsappNumber: data.whatsappNumber || '',
-        whatsappMessage: data.whatsappMessage || '',
-        whatsappNumber2: data.whatsappNumber2 || '',
-        whatsappMessage2: data.whatsappMessage2 || '',
-        telegramUsername: data.telegramUsername || '',
-        liveChatUrl: data.liveChatUrl || '',
-      });
+    if (data?.contacts) {
+      setContacts(
+        data.contacts.map((c) => ({
+          id: c.id || tempId(),
+          type: TYPES[c.type] ? c.type : 'link',
+          label: c.label || '',
+          value: c.value || '',
+          message: c.message || '',
+        })),
+      );
     }
   }, [data]);
 
@@ -42,44 +86,71 @@ export default function Settings() {
       setError(err.message);
       setSaved(false);
     },
-    onSuccess: (res) => {
+    onSuccess: () => {
       setError('');
       setSaved(true);
       queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
       queryClient.invalidateQueries({ queryKey: ['public-settings'] });
-      setForm({
-        whatsappNumber: res.whatsappNumber || '',
-        whatsappMessage: res.whatsappMessage || '',
-        whatsappNumber2: res.whatsappNumber2 || '',
-        whatsappMessage2: res.whatsappMessage2 || '',
-        telegramUsername: res.telegramUsername || '',
-        liveChatUrl: res.liveChatUrl || '',
-      });
       setTimeout(() => setSaved(false), 2500);
     },
   });
 
-  function set(field, value) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function touch() {
     setSaved(false);
+  }
+
+  function addContact(type = 'whatsapp') {
+    touch();
+    setContacts((cs) => [
+      ...cs,
+      { id: tempId(), type, label: '', value: '', message: '' },
+    ]);
+  }
+
+  function updateContact(id, patch) {
+    touch();
+    setContacts((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  }
+
+  function removeContact(id) {
+    touch();
+    setContacts((cs) => cs.filter((c) => c.id !== id));
+  }
+
+  function move(id, dir) {
+    touch();
+    setContacts((cs) => {
+      const i = cs.findIndex((c) => c.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= cs.length) return cs;
+      const next = [...cs];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
   }
 
   function submit(e) {
     e.preventDefault();
-    mutation.mutate(form);
+    // Kirim hanya field yang dikenal server; ID sementara ("new-…") dibuang biar
+    // server yang membuat ID final.
+    const payload = contacts.map((c) => ({
+      id: c.id.startsWith('new-') ? undefined : c.id,
+      type: c.type,
+      label: c.label,
+      value: c.value,
+      message: c.message,
+    }));
+    mutation.mutate({ contacts: payload });
   }
-
-  const previewWa = waLink(form.whatsappNumber, form.whatsappMessage);
-  const previewWa2 = waLink(form.whatsappNumber2, form.whatsappMessage2);
-  const previewTg = tgLink(form.telegramUsername);
 
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-slate-100 mb-1">Pengaturan Kontak</h1>
       <p className="text-slate-400 mb-6">
-        Atur tombol WhatsApp CS 1, WhatsApp CS 2, Telegram &amp; Live Chat yang tampil di
-        halaman utama. Jika nomor atau link terblokir, cukup ganti di sini — tidak perlu
-        deploy ulang.
+        Buat sendiri tombol kontak yang tampil di halaman utama. Beri nama bebas
+        (mis. “WA Deposit”, “CS VIP”, “Grup Telegram”), pilih jenisnya, lalu isi
+        nomor/tautannya. Tambah sebanyak yang Anda mau — semua bisa diganti di sini
+        tanpa deploy ulang.
       </p>
 
       {isLoading ? (
@@ -87,170 +158,37 @@ export default function Settings() {
           <Loader2 size={18} className="animate-spin" /> Memuat pengaturan…
         </div>
       ) : (
-        <form onSubmit={submit} className="space-y-5">
-          {/* WhatsApp CS 1 */}
-          <div className="glass p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-9 h-9 rounded-xl grid place-items-center bg-emerald-500/15 text-emerald-300">
-                <Phone size={18} />
-              </span>
-              <h2 className="font-semibold text-slate-100">Tombol WhatsApp CS 1</h2>
+        <form onSubmit={submit} className="space-y-4">
+          {contacts.length === 0 && (
+            <div className="glass p-6 text-center text-slate-400">
+              Belum ada kontak. Klik “Tambah kontak” untuk membuat tombol pertama.
             </div>
+          )}
 
-            <label className="block text-sm text-slate-300 mb-1.5">
-              Nomor WhatsApp CS 1
-            </label>
-            <input
-              value={form.whatsappNumber}
-              onChange={(e) => set('whatsappNumber', e.target.value)}
-              placeholder="Contoh: 6281234567890"
-              inputMode="numeric"
-              className="field w-full"
+          {contacts.map((c, i) => (
+            <ContactCard
+              key={c.id}
+              contact={c}
+              index={i}
+              total={contacts.length}
+              onChange={(patch) => updateContact(c.id, patch)}
+              onRemove={() => removeContact(c.id)}
+              onMove={(dir) => move(c.id, dir)}
             />
-            <p className="mt-1.5 text-xs text-slate-500">
-              Format internasional tanpa tanda “+”. Awali kode negara (Indonesia: 62).
-              Kosongkan untuk menyembunyikan tombol WhatsApp CS 1.
-            </p>
+          ))}
 
-            <label className="block text-sm text-slate-300 mb-1.5 mt-4">
-              Pesan otomatis (opsional)
-            </label>
-            <input
-              value={form.whatsappMessage}
-              onChange={(e) => set('whatsappMessage', e.target.value)}
-              placeholder="Halo, saya ingin bertanya tentang AMAN365."
-              className="field w-full"
-            />
-
-            {previewWa && (
-              <a
-                href={previewWa}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-xs text-emerald-300 hover:underline"
+          {/* Tombol tambah */}
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(TYPES).map(([type, def]) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => addContact(type)}
+                className="glass inline-flex items-center gap-2 px-3.5 py-2 text-sm text-slate-200 hover:text-white hover:border-slate-500 transition"
               >
-                <ExternalLink size={13} /> Tes tautan WhatsApp CS 1
-              </a>
-            )}
-          </div>
-
-          {/* WhatsApp CS 2 */}
-          <div className="glass p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-9 h-9 rounded-xl grid place-items-center bg-emerald-500/15 text-emerald-300">
-                <Phone size={18} />
-              </span>
-              <h2 className="font-semibold text-slate-100">Tombol WhatsApp CS 2</h2>
-            </div>
-
-            <label className="block text-sm text-slate-300 mb-1.5">
-              Nomor WhatsApp CS 2
-            </label>
-            <input
-              value={form.whatsappNumber2}
-              onChange={(e) => set('whatsappNumber2', e.target.value)}
-              placeholder="Contoh: 6281234567891"
-              inputMode="numeric"
-              className="field w-full"
-            />
-            <p className="mt-1.5 text-xs text-slate-500">
-              Format internasional tanpa tanda “+”. Awali kode negara (Indonesia: 62).
-              Kosongkan untuk menyembunyikan tombol WhatsApp CS 2.
-            </p>
-
-            <label className="block text-sm text-slate-300 mb-1.5 mt-4">
-              Pesan otomatis (opsional)
-            </label>
-            <input
-              value={form.whatsappMessage2}
-              onChange={(e) => set('whatsappMessage2', e.target.value)}
-              placeholder="Halo, saya ingin bertanya tentang AMAN365."
-              className="field w-full"
-            />
-
-            {previewWa2 && (
-              <a
-                href={previewWa2}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-xs text-emerald-300 hover:underline"
-              >
-                <ExternalLink size={13} /> Tes tautan WhatsApp CS 2
-              </a>
-            )}
-          </div>
-
-          {/* Telegram */}
-          <div className="glass p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-9 h-9 rounded-xl grid place-items-center bg-sky-500/15 text-sky-300">
-                <Send size={18} />
-              </span>
-              <h2 className="font-semibold text-slate-100">Tombol Telegram</h2>
-            </div>
-
-            <label className="block text-sm text-slate-300 mb-1.5">
-              Username Telegram
-            </label>
-            <div className="flex items-center">
-              <span className="field rounded-r-none border-r-0 text-slate-400 select-none">@</span>
-              <input
-                value={form.telegramUsername}
-                onChange={(e) => set('telegramUsername', e.target.value)}
-                placeholder="aman365cs"
-                className="field w-full rounded-l-none"
-              />
-            </div>
-            <p className="mt-1.5 text-xs text-slate-500">
-              Cukup username tanpa “@” (mis. <span className="text-slate-400">aman365cs</span>).
-              Otomatis jadi t.me/username. Kosongkan untuk menyembunyikan tombol Telegram.
-            </p>
-
-            {previewTg && (
-              <a
-                href={previewTg}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-xs text-sky-300 hover:underline"
-              >
-                <ExternalLink size={13} /> Tes tautan Telegram
-              </a>
-            )}
-          </div>
-
-          {/* Live Chat */}
-          <div className="glass p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-9 h-9 rounded-xl grid place-items-center bg-indigo-500/15 text-indigo-300">
-                <MessageCircle size={18} />
-              </span>
-              <h2 className="font-semibold text-slate-100">Tombol Live Chat</h2>
-            </div>
-
-            <label className="block text-sm text-slate-300 mb-1.5">
-              URL Live Chat
-            </label>
-            <input
-              value={form.liveChatUrl}
-              onChange={(e) => set('liveChatUrl', e.target.value)}
-              placeholder="https://direct.lc.chat/14863773"
-              className="field w-full"
-            />
-            <p className="mt-1.5 text-xs text-slate-500">
-              Tempel link Live Chat lengkap (harus diawali http:// atau https://).
-              Kosongkan untuk menyembunyikan tombol Live Chat.
-            </p>
-
-            {form.liveChatUrl && /^https?:\/\//i.test(form.liveChatUrl) && (
-              <a
-                href={form.liveChatUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:underline"
-              >
-                <ExternalLink size={13} /> Tes tautan Live Chat
-              </a>
-            )}
+                <Plus size={15} /> {def.name}
+              </button>
+            ))}
           </div>
 
           {error && (
@@ -259,7 +197,7 @@ export default function Settings() {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pt-1">
             <button
               type="submit"
               disabled={mutation.isPending}
@@ -282,6 +220,123 @@ export default function Settings() {
             )}
           </div>
         </form>
+      )}
+    </div>
+  );
+}
+
+function ContactCard({ contact, index, total, onChange, onRemove, onMove }) {
+  const def = TYPES[contact.type] || TYPES.link;
+  const { Icon } = def;
+  const href = contactHref(contact);
+
+  return (
+    <div className="glass p-5">
+      {/* header baris: jenis + urutkan + hapus */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className={`w-9 h-9 rounded-xl grid place-items-center ${def.accent}`}>
+          <Icon size={18} />
+        </span>
+
+        <select
+          value={contact.type}
+          onChange={(e) => onChange({ type: e.target.value })}
+          className="field py-1.5 pr-8 text-sm"
+          aria-label="Jenis kontak"
+        >
+          {Object.entries(TYPES).map(([type, d]) => (
+            <option key={type} value={type}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="ml-auto flex items-center gap-1 text-slate-400">
+          <button
+            type="button"
+            onClick={() => onMove(-1)}
+            disabled={index === 0}
+            title="Naikkan"
+            className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <GripVertical size={16} className="rotate-90" />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Hapus kontak"
+            className="p-1.5 rounded-lg text-red-300 hover:bg-red-500/15"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Label bebas */}
+      <label className="block text-sm text-slate-300 mb-1.5">
+        Nama tombol (label)
+      </label>
+      <input
+        value={contact.label}
+        onChange={(e) => onChange({ label: e.target.value })}
+        placeholder="mis. WhatsApp CS 1, WA Deposit, CS VIP…"
+        maxLength={40}
+        className="field w-full"
+      />
+      <p className="mt-1.5 text-xs text-slate-500">
+        Teks yang tampil di tombol. Kosongkan untuk memakai nama default “{def.name}”.
+      </p>
+
+      {/* Nilai (nomor / username / URL) */}
+      <label className="block text-sm text-slate-300 mb-1.5 mt-4">
+        {def.valueLabel}
+      </label>
+      {contact.type === 'telegram' ? (
+        <div className="flex items-center">
+          <span className="field rounded-r-none border-r-0 text-slate-400 select-none">@</span>
+          <input
+            value={contact.value}
+            onChange={(e) => onChange({ value: e.target.value })}
+            placeholder={def.placeholder}
+            className="field w-full rounded-l-none"
+          />
+        </div>
+      ) : (
+        <input
+          value={contact.value}
+          onChange={(e) => onChange({ value: e.target.value })}
+          placeholder={def.placeholder}
+          inputMode={contact.type === 'whatsapp' ? 'numeric' : 'text'}
+          className="field w-full"
+        />
+      )}
+      <p className="mt-1.5 text-xs text-slate-500">{def.hint}</p>
+
+      {/* Pesan otomatis (WhatsApp saja) */}
+      {def.hasMessage && (
+        <>
+          <label className="block text-sm text-slate-300 mb-1.5 mt-4">
+            Pesan otomatis (opsional)
+          </label>
+          <input
+            value={contact.message}
+            onChange={(e) => onChange({ message: e.target.value })}
+            placeholder="Halo, saya ingin bertanya tentang AMAN365."
+            maxLength={300}
+            className="field w-full"
+          />
+        </>
+      )}
+
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`mt-3 inline-flex items-center gap-1.5 text-xs hover:underline ${def.link}`}
+        >
+          <ExternalLink size={13} /> Tes tautan
+        </a>
       )}
     </div>
   );
