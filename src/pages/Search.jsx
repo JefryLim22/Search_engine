@@ -269,7 +269,6 @@ function SearchBox({ input, setInput, onSearch, compact = false }) {
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => setFocused(true)}
           onKeyDown={onKeyDown}
-          autoFocus
           autoComplete="off"
           placeholder="Telusuri AMAN365 atau ketik URL"
           className="h-full flex-1 bg-transparent text-[16px] text-[#202124] outline-none placeholder:text-[#80868b]"
