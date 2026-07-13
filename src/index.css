@@ -162,6 +162,13 @@ body::after {
     --ac-accent-hi: #35d47a;
     --ac-shadow: rgba(23, 185, 85, 0.34);
   }
+
+  /* Telegram variant — biru brand */
+  .ac-btn--tg {
+    --ac-accent: #229ed9;
+    --ac-accent-hi: #37bdf0;
+    --ac-shadow: rgba(34, 158, 217, 0.34);
+  }
 }
 
 mark {

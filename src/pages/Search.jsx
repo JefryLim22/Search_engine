@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { api, hostOf, waLink } from '../lib/api.js';
+import { api, hostOf, waLink, tgLink } from '../lib/api.js';
 
 /* Rekomendasi keyword yang muncul di search box (autocomplete).
    Tambah/kurangi di sini sesuka hati. */
@@ -466,9 +466,11 @@ function ContactButtons() {
 
   const liveChatUrl =
     data?.liveChatUrl && /^https?:\/\//i.test(data.liveChatUrl) ? data.liveChatUrl : '';
-  const wa = waLink(data?.whatsappNumber, data?.whatsappMessage);
+  const wa1 = waLink(data?.whatsappNumber, data?.whatsappMessage);
+  const wa2 = waLink(data?.whatsappNumber2, data?.whatsappMessage2);
+  const tg = tgLink(data?.telegramUsername);
 
-  if (!liveChatUrl && !wa) return null;
+  if (!liveChatUrl && !wa1 && !wa2 && !tg) return null;
 
   return (
     <div className="ac-btn-row mt-8 flex flex-wrap items-center justify-center gap-3.5">
@@ -485,9 +487,9 @@ function ContactButtons() {
           <span className="ac-btn__label">Live Chat</span>
         </a>
       )}
-      {wa && (
+      {wa1 && (
         <a
-          href={wa}
+          href={wa1}
           target="_blank"
           rel="noopener noreferrer"
           className="ac-btn ac-btn--wa"
@@ -495,7 +497,33 @@ function ContactButtons() {
           <span className="ac-btn__icon">
             <WhatsAppIcon />
           </span>
-          <span className="ac-btn__label">WhatsApp</span>
+          <span className="ac-btn__label">WhatsApp CS 1</span>
+        </a>
+      )}
+      {wa2 && (
+        <a
+          href={wa2}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ac-btn ac-btn--wa"
+        >
+          <span className="ac-btn__icon">
+            <WhatsAppIcon />
+          </span>
+          <span className="ac-btn__label">WhatsApp CS 2</span>
+        </a>
+      )}
+      {tg && (
+        <a
+          href={tg}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ac-btn ac-btn--tg"
+        >
+          <span className="ac-btn__icon">
+            <TelegramIcon />
+          </span>
+          <span className="ac-btn__label">Telegram</span>
         </a>
       )}
     </div>
@@ -517,6 +545,14 @@ function WhatsAppIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.44-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5l-.57-.01c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.22 3.08.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.4.24-.7.24-1.28.17-1.4-.07-.13-.27-.2-.57-.35zM12.04 21.5h-.01a9.4 9.4 0 0 1-4.79-1.31l-.34-.2-3.56.93.95-3.47-.22-.36a9.38 9.38 0 0 1-1.44-5A9.42 9.42 0 0 1 18.7 5.3a9.36 9.36 0 0 1 2.76 6.66c0 5.2-4.23 9.43-9.42 9.43zm8.02-17.44A11.34 11.34 0 0 0 2.06 17.5L.5 23.2l5.83-1.53a11.32 11.32 0 0 0 5.42 1.38h.01c6.24 0 11.32-5.08 11.33-11.33a11.26 11.26 0 0 0-3.03-7.66z" />
+    </svg>
+  );
+}
+
+function TelegramIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M21.94 4.9 18.9 19.2c-.23 1.02-.84 1.27-1.7.79l-4.7-3.46-2.27 2.18c-.25.25-.46.46-.94.46l.33-4.78 8.7-7.86c.38-.34-.08-.53-.59-.19L6.78 13.2l-4.63-1.45c-1-.31-1.02-1 .21-1.48l18.1-6.98c.84-.31 1.57.19 1.29 1.62z" />
     </svg>
   );
 }

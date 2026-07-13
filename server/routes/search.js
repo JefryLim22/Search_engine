@@ -11,6 +11,9 @@ router.get('/settings', (req, res) => {
   res.json({
     whatsappNumber: s.whatsappNumber,
     whatsappMessage: s.whatsappMessage,
+    whatsappNumber2: s.whatsappNumber2,
+    whatsappMessage2: s.whatsappMessage2,
+    telegramUsername: s.telegramUsername,
     liveChatUrl: s.liveChatUrl,
   });
 });

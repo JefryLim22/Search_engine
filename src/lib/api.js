@@ -38,6 +38,16 @@ export function waLink(number, message = '') {
   return `https://wa.me/${n}${q}`;
 }
 
+// Bangun URL Telegram dari username (tanpa "@"). Kosong bila username kosong.
+export function tgLink(username) {
+  const u = String(username || '')
+    .trim()
+    .replace(/^https?:\/\/(t\.me|telegram\.me)\//i, '')
+    .replace(/^@/, '')
+    .replace(/\s+/g, '');
+  return u ? `https://t.me/${u}` : '';
+}
+
 export const api = {
   // public web search
   search: (params) => req(`/search?${new URLSearchParams(params)}`),
