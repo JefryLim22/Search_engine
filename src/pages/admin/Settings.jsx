@@ -11,8 +11,10 @@ import {
   Plus,
   Trash2,
   GripVertical,
+  Sparkles,
 } from 'lucide-react';
 import { api, contactHref } from '../../lib/api.js';
+import { useSite } from '../../lib/site.jsx';
 
 // Definisi jenis kontak untuk form. `value`/`message` cocok dengan sanitasi server.
 const TYPES = {
@@ -54,34 +56,38 @@ function tempId() {
 }
 
 export default function Settings() {
+  const { site } = useSite();
   const queryClient = useQueryClient();
   const [contacts, setContacts] = useState([]);
+  const [brandName, setBrandName] = useState('');
+  const [recommendedText, setRecommendedText] = useState('');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-settings'],
-    queryFn: api.adminSettings,
+    queryKey: ['admin-settings', site],
+    queryFn: () => api.adminSettings(site),
     retry: false,
   });
 
-  // Isi form saat data pertama kali termuat (atau setelah simpan).
+  // Isi form saat data termuat (pertama kali, setelah simpan, atau ganti situs).
   useEffect(() => {
-    if (data?.contacts) {
-      setContacts(
-        data.contacts.map((c) => ({
-          id: c.id || tempId(),
-          type: TYPES[c.type] ? c.type : 'link',
-          label: c.label || '',
-          value: c.value || '',
-          message: c.message || '',
-        })),
-      );
-    }
+    if (!data) return;
+    setBrandName(data.brand?.name || '');
+    setRecommendedText((data.recommended || []).join('\n'));
+    setContacts(
+      (data.contacts || []).map((c) => ({
+        id: c.id || tempId(),
+        type: TYPES[c.type] ? c.type : 'link',
+        label: c.label || '',
+        value: c.value || '',
+        message: c.message || '',
+      })),
+    );
   }, [data]);
 
   const mutation = useMutation({
-    mutationFn: api.updateSettings,
+    mutationFn: (body) => api.updateSettings(site, body),
     onError: (err) => {
       setError(err.message);
       setSaved(false);
@@ -91,6 +97,7 @@ export default function Settings() {
       setSaved(true);
       queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
       queryClient.invalidateQueries({ queryKey: ['public-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
       setTimeout(() => setSaved(false), 2500);
     },
   });
@@ -140,17 +147,19 @@ export default function Settings() {
       value: c.value,
       message: c.message,
     }));
-    mutation.mutate({ contacts: payload });
+    mutation.mutate({
+      brand: { name: brandName },
+      recommended: recommendedText.split('\n'),
+      contacts: payload,
+    });
   }
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-slate-100 mb-1">Pengaturan Kontak</h1>
+      <h1 className="text-2xl font-bold text-slate-100 mb-1">Pengaturan Situs</h1>
       <p className="text-slate-400 mb-6">
-        Buat sendiri tombol kontak yang tampil di halaman utama. Beri nama bebas
-        (mis. “WA Deposit”, “CS VIP”, “Grup Telegram”), pilih jenisnya, lalu isi
-        nomor/tautannya. Tambah sebanyak yang Anda mau — semua bisa diganti di sini
-        tanpa deploy ulang.
+        Atur identitas brand, saran pencarian, dan tombol kontak untuk situs yang
+        sedang dipilih di sidebar. Semua bisa diganti di sini tanpa deploy ulang.
       </p>
 
       {isLoading ? (
@@ -159,6 +168,50 @@ export default function Settings() {
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
+          {/* ---------- Identitas brand ---------- */}
+          <div className="glass p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-fuchsia-500/15 text-fuchsia-300">
+                <Sparkles size={18} />
+              </span>
+              <h2 className="font-semibold text-slate-100">Identitas Brand</h2>
+            </div>
+
+            <label className="mb-1.5 block text-sm text-slate-300">Nama brand</label>
+            <input
+              value={brandName}
+              onChange={(e) => {
+                touch();
+                setBrandName(e.target.value);
+              }}
+              placeholder="mis. AMAN365"
+              maxLength={30}
+              className="field w-full"
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Tampil sebagai logo besar di halaman pencarian (warna-warni otomatis),
+              tombol “Penelusuran …”, dan placeholder kotak pencarian.
+            </p>
+
+            <label className="mb-1.5 mt-4 block text-sm text-slate-300">
+              Saran pencarian (satu per baris)
+            </label>
+            <textarea
+              value={recommendedText}
+              onChange={(e) => {
+                touch();
+                setRecommendedText(e.target.value);
+              }}
+              rows={5}
+              spellCheck={false}
+              placeholder={'BRANDKU\nBRANDKU login\nBRANDKU daftar'}
+              className="field w-full font-mono text-[13px] leading-relaxed"
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Muncul sebagai saran saat pengunjung mengklik kotak pencarian.
+              Maksimal 10 baris.
+            </p>
+          </div>
           {contacts.length === 0 && (
             <div className="glass p-6 text-center text-slate-400">
               Belum ada kontak. Klik “Tambah kontak” untuk membuat tombol pertama.

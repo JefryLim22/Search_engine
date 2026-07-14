@@ -2,17 +2,27 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { FileText, Activity, Globe, CheckCircle2 } from 'lucide-react';
 import { api } from '../../lib/api.js';
+import { useSite } from '../../lib/site.jsx';
 
 export default function Dashboard() {
+  const { site } = useSite();
+  const { data: sites } = useQuery({
+    queryKey: ['sites'],
+    queryFn: api.sites,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const siteName = sites?.sites?.find((s) => s.id === site)?.name || site;
+
   const { data: stats, isError } = useQuery({
-    queryKey: ['stats'],
-    queryFn: api.stats,
+    queryKey: ['stats', site],
+    queryFn: () => api.stats(site),
     retry: false,
     refetchInterval: 5000,
   });
   const { data: status } = useQuery({
-    queryKey: ['crawl-status'],
-    queryFn: api.crawlStatus,
+    queryKey: ['crawl-status', site],
+    queryFn: () => api.crawlStatus(site),
     retry: false,
     refetchInterval: 3000,
   });
@@ -41,7 +51,10 @@ export default function Dashboard() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold text-slate-100 mb-1">Dashboard</h1>
-      <p className="text-slate-400 mb-6">Ringkasan mesin pencari &amp; crawler.</p>
+      <p className="text-slate-400 mb-6">
+        Ringkasan mesin pencari &amp; crawler — situs{' '}
+        <span className="font-semibold text-slate-200">{siteName}</span>.
+      </p>
 
       {isError && (
         <div className="glass border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-200 mb-6">

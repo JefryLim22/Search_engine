@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { createHash } from 'crypto';
 import { pagesIndex } from './meili.js';
+import { SITE_IDS, DEFAULT_SITE } from './sites.js';
 
 // Identify the bot honestly so site owners can recognize / block it.
 export const USER_AGENT =
@@ -8,25 +9,35 @@ export const USER_AGENT =
 
 const MAX_CONTENT_CHARS = 5000;
 
-// Shared, observable crawl state (single crawl job at a time).
-export const crawlState = {
-  running: false,
-  startedAt: null,
-  finishedAt: null,
-  crawled: 0,
-  indexed: 0,
-  errors: 0,
-  skipped: 0,
-  queued: 0,
-  maxPages: 0,
-  currentUrl: null,
-  stopRequested: false,
-  log: [],
-};
+// Observable crawl state, satu per situs (tiap situs maksimal satu job).
+function newCrawlState() {
+  return {
+    running: false,
+    startedAt: null,
+    finishedAt: null,
+    crawled: 0,
+    indexed: 0,
+    errors: 0,
+    skipped: 0,
+    queued: 0,
+    maxPages: 0,
+    currentUrl: null,
+    stopRequested: false,
+    log: [],
+  };
+}
 
-function log(msg) {
-  crawlState.log.unshift(`${new Date().toLocaleTimeString()}  ${msg}`);
-  if (crawlState.log.length > 60) crawlState.log.pop();
+export const crawlStates = Object.fromEntries(
+  SITE_IDS.map((id) => [id, newCrawlState()])
+);
+
+export function getCrawlState(siteId) {
+  return crawlStates[siteId] || crawlStates[DEFAULT_SITE];
+}
+
+function log(state, msg) {
+  state.log.unshift(`${new Date().toLocaleTimeString()}  ${msg}`);
+  if (state.log.length > 60) state.log.pop();
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -113,17 +124,18 @@ function extractPage(finalUrl, html) {
 }
 
 /**
- * Crawl from seed URLs (breadth-first) and index each HTML page.
- * Resolves when the crawl finishes/stops.
+ * Crawl from seed URLs (breadth-first) and index each HTML page into the
+ * site's own index. Resolves when the crawl finishes/stops.
  */
-export async function runCrawl({
+export async function runCrawl(siteId, {
   seeds = [],
   maxPages = 50,
   maxDepth = 2,
   sameHostOnly = true,
   delayMs = 800,
 }) {
-  Object.assign(crawlState, {
+  const state = getCrawlState(siteId);
+  Object.assign(state, {
     running: true,
     startedAt: new Date().toISOString(),
     finishedAt: null,
@@ -155,13 +167,13 @@ export async function runCrawl({
       }
     }
   }
-  crawlState.queued = queue.length;
-  log(`crawl started · ${queue.length} seed(s) · max ${maxPages} pages, depth ${maxDepth}`);
+  state.queued = queue.length;
+  log(state, `crawl started · ${queue.length} seed(s) · max ${maxPages} pages, depth ${maxDepth}`);
 
-  while (queue.length && crawlState.crawled < maxPages && !crawlState.stopRequested) {
+  while (queue.length && state.crawled < maxPages && !state.stopRequested) {
     const { url, depth } = queue.shift();
-    crawlState.queued = queue.length;
-    crawlState.currentUrl = url;
+    state.queued = queue.length;
+    state.currentUrl = url;
 
     let origin;
     let host;
@@ -177,8 +189,8 @@ export async function runCrawl({
 
     if (!robotsCache.has(origin)) robotsCache.set(origin, await fetchRobots(origin));
     if (!isAllowed(pathname, robotsCache.get(origin))) {
-      crawlState.skipped++;
-      log(`skip (robots.txt): ${url}`);
+      state.skipped++;
+      log(state, `skip (robots.txt): ${url}`);
       continue;
     }
 
@@ -188,17 +200,17 @@ export async function runCrawl({
         redirect: 'follow',
         signal: AbortSignal.timeout(12000),
       });
-      crawlState.crawled++;
+      state.crawled++;
 
       const contentType = res.headers.get('content-type') || '';
       if (!res.ok || !contentType.includes('text/html')) {
-        crawlState.skipped++;
-        log(`skip (${res.status}, ${contentType.split(';')[0] || 'n/a'}): ${url}`);
+        state.skipped++;
+        log(state, `skip (${res.status}, ${contentType.split(';')[0] || 'n/a'}): ${url}`);
       } else {
         const { doc, links } = extractPage(res.url, await res.text());
-        await pagesIndex().addDocuments([doc]);
-        crawlState.indexed++;
-        log(`indexed: ${doc.title}`);
+        await pagesIndex(siteId).addDocuments([doc]);
+        state.indexed++;
+        log(state, `indexed: ${doc.title}`);
 
         if (depth < maxDepth) {
           for (const raw of links) {
@@ -212,35 +224,37 @@ export async function runCrawl({
             seen.add(n);
             queue.push({ url: n, depth: depth + 1 });
           }
-          crawlState.queued = queue.length;
+          state.queued = queue.length;
         }
       }
     } catch (err) {
-      crawlState.errors++;
-      log(`error: ${url} — ${err.message}`);
+      state.errors++;
+      log(state, `error: ${url} — ${err.message}`);
     }
 
     await sleep(delayMs);
   }
 
-  crawlState.running = false;
-  crawlState.finishedAt = new Date().toISOString();
-  crawlState.currentUrl = null;
+  state.running = false;
+  state.finishedAt = new Date().toISOString();
+  state.currentUrl = null;
   log(
-    crawlState.stopRequested
-      ? `stopped · ${crawlState.indexed} indexed`
-      : `finished · ${crawlState.indexed} indexed, ${crawlState.errors} error(s)`
+    state,
+    state.stopRequested
+      ? `stopped · ${state.indexed} indexed`
+      : `finished · ${state.indexed} indexed, ${state.errors} error(s)`
   );
-  return { indexed: crawlState.indexed, crawled: crawlState.crawled };
+  return { indexed: state.indexed, crawled: state.crawled };
 }
 
 // Fire-and-forget starter used by the API (returns immediately).
-export function startCrawl(opts) {
-  if (crawlState.running) throw new Error('a crawl is already running');
-  runCrawl(opts).catch((err) => {
-    crawlState.running = false;
-    crawlState.finishedAt = new Date().toISOString();
-    log(`crawl crashed: ${err.message}`);
+export function startCrawl(siteId, opts) {
+  const state = getCrawlState(siteId);
+  if (state.running) throw new Error('a crawl is already running for this site');
+  runCrawl(siteId, opts).catch((err) => {
+    state.running = false;
+    state.finishedAt = new Date().toISOString();
+    log(state, `crawl crashed: ${err.message}`);
   });
   return { ok: true };
 }

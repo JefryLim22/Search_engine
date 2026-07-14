@@ -3,21 +3,26 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api, hostOf, contactHref } from '../lib/api.js';
 
-/* Rekomendasi keyword yang muncul di search box (autocomplete).
-   Tambah/kurangi di sini sesuka hati. */
-const RECOMMENDED = [
-  'AZGAMING388',
-  'AZGAMING388 login',
-  'AZGAMING388 daftar',
-  'AZGAMING388 link alternatif',
-  'AZGAMING388 rtp',
-];
-
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const page = Number(searchParams.get('page') || '1');
   const [input, setInput] = useState(query);
+
+  // Identitas situs (brand + saran keyword + kontak) dari server — ditentukan
+  // otomatis dari subdomain yang diakses, diatur admin lewat panel.
+  const { data: siteCfg } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: api.settings,
+    retry: false,
+    staleTime: 60_000,
+  });
+  const brand = siteCfg?.site?.name || '';
+  const recommended = siteCfg?.recommended || [];
+
+  useEffect(() => {
+    if (brand) document.title = brand;
+  }, [brand]);
 
   useEffect(() => {
     setInput(query);
@@ -78,13 +83,19 @@ export default function Search() {
 
         {/* center */}
         <div className="flex flex-1 flex-col items-center px-4 pb-40" style={{ marginTop: '14vh' }}>
-          <Logo className="mb-7" size="home" />
+          <Logo name={brand} className="mb-7" size="home" />
 
           <form onSubmit={submit} className="w-full max-w-[584px]">
-            <SearchBox input={input} setInput={setInput} onSearch={runSearch} />
+            <SearchBox
+              input={input}
+              setInput={setInput}
+              onSearch={runSearch}
+              recommended={recommended}
+              brand={brand}
+            />
             <div className="mt-7 flex justify-center gap-3">
               <button type="submit" className="g-btn">
-                Penelusuran AMAN365
+                Penelusuran {brand || '…'}
               </button>
               <button type="submit" className="g-btn">
                 Saya Lagi Beruntung
@@ -110,10 +121,17 @@ export default function Search() {
       <header className="border-b border-[#ebebeb]">
         <div className="flex flex-col gap-3 px-4 pt-5 sm:flex-row sm:items-center sm:gap-6 sm:px-6 md:pl-[150px]">
           <Link to="/" className="shrink-0 self-start sm:self-center">
-            <Logo size="serp" />
+            <Logo name={brand} size="serp" />
           </Link>
           <form onSubmit={submit} className="w-full max-w-[640px]">
-            <SearchBox input={input} setInput={setInput} onSearch={runSearch} compact />
+            <SearchBox
+              input={input}
+              setInput={setInput}
+              onSearch={runSearch}
+              recommended={recommended}
+              brand={brand}
+              compact
+            />
           </form>
         </div>
         {/* tabs */}
@@ -175,25 +193,19 @@ export default function Search() {
 
 /* ------------------------------------------------------------------ */
 
-function Logo({ className = '', size = 'home' }) {
-  // "AMAN365" dalam palet Google
-  const letters = [
-    ['A', '#4285F4'],
-    ['M', '#EA4335'],
-    ['A', '#FBBC05'],
-    ['N', '#4285F4'],
-    ['3', '#34A853'],
-    ['6', '#EA4335'],
-    ['5', '#4285F4'],
-  ];
+// Palet Google berulang (pola sama dgn "Google": biru-merah-kuning-biru-hijau-merah)
+// — nama brand apa pun otomatis dapat warna-warni yang konsisten.
+const LOGO_COLORS = ['#4285F4', '#EA4335', '#FBBC05', '#4285F4', '#34A853', '#EA4335'];
+
+function Logo({ name = '', className = '', size = 'home' }) {
   const px = size === 'home' ? 'text-[64px] sm:text-[80px]' : 'text-[26px]';
   return (
     <span
       className={`select-none font-medium leading-none tracking-tight ${px} ${className}`}
       style={{ fontFamily: '"Google Sans", "Product Sans", Arial, sans-serif' }}
     >
-      {letters.map(([ch, color], i) => (
-        <span key={i} style={{ color }}>
+      {name.split('').map((ch, i) => (
+        <span key={i} style={{ color: LOGO_COLORS[i % LOGO_COLORS.length] }}>
           {ch}
         </span>
       ))}
@@ -201,17 +213,17 @@ function Logo({ className = '', size = 'home' }) {
   );
 }
 
-function SearchBox({ input, setInput, onSearch, compact = false }) {
+function SearchBox({ input, setInput, onSearch, recommended = [], brand = '', compact = false }) {
   const [focused, setFocused] = useState(false);
   const [active, setActive] = useState(-1); // index yang disorot keyboard
   const wrapRef = useRef(null);
 
-  // Bangun daftar saran dari input.
+  // Bangun daftar saran dari input (daftarnya diatur admin per situs).
   const q = input.trim().toLowerCase();
   const suggestions = (
     q
-      ? RECOMMENDED.filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q)
-      : RECOMMENDED
+      ? recommended.filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q)
+      : recommended
   ).slice(0, 8);
 
   const open = focused && suggestions.length > 0;
@@ -270,7 +282,7 @@ function SearchBox({ input, setInput, onSearch, compact = false }) {
           onFocus={() => setFocused(true)}
           onKeyDown={onKeyDown}
           autoComplete="off"
-          placeholder="Telusuri AMAN365 atau ketik URL"
+          placeholder={brand ? `Telusuri ${brand} atau ketik URL` : 'Telusuri atau ketik URL'}
           className="h-full flex-1 bg-transparent text-[16px] text-[#202124] outline-none placeholder:text-[#80868b]"
           style={{ fontFamily: 'Arial, sans-serif' }}
         />

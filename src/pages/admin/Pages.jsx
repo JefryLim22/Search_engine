@@ -7,16 +7,18 @@ import {
 } from '@tanstack/react-query';
 import { Trash2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { api, hostOf } from '../../lib/api.js';
+import { useSite } from '../../lib/site.jsx';
 
 export default function Pages() {
+  const { site } = useSite();
   const queryClient = useQueryClient();
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
 
   const params = { q, page: String(page), perPage: '20' };
   const { data, isFetching } = useQuery({
-    queryKey: ['pages', params],
-    queryFn: () => api.pages(params),
+    queryKey: ['pages', site, params],
+    queryFn: () => api.pages(site, params),
     placeholderData: keepPreviousData,
   });
 
@@ -25,8 +27,14 @@ export default function Pages() {
     queryClient.invalidateQueries({ queryKey: ['stats'] });
   };
 
-  const deleteMutation = useMutation({ mutationFn: api.deletePage, onSuccess: invalidate });
-  const clearMutation = useMutation({ mutationFn: api.clearPages, onSuccess: invalidate });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.deletePage(site, id),
+    onSuccess: invalidate,
+  });
+  const clearMutation = useMutation({
+    mutationFn: () => api.clearPages(site),
+    onSuccess: invalidate,
+  });
 
   return (
     <div className="max-w-5xl">

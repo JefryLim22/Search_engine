@@ -2,38 +2,43 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { getSite, DEFAULT_SITE } from './sites.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const FILE = path.join(DATA_DIR, 'settings.json');
+
+// Settings disimpan per situs: data/settings.cari.json, data/settings.beer.json.
+// File lama data/settings.json (era satu situs) tetap dibaca sebagai milik
+// situs default (cari) sampai admin menyimpan ulang.
+const fileFor = (siteId) => path.join(DATA_DIR, `settings.${siteId}.json`);
+const LEGACY_FILE = path.join(DATA_DIR, 'settings.json');
 
 // Jenis kontak yang didukung. Admin membuat kontak sendiri (label bebas) dan
 // memilih salah satu jenis ini; kita hanya menyediakan wadahnya.
 export const CONTACT_TYPES = ['whatsapp', 'telegram', 'link'];
 
-// Batas jumlah kontak agar file settings & tampilan tidak membludak.
+// Batas jumlah kontak & saran keyword agar file settings tidak membludak.
 const MAX_CONTACTS = 20;
-
-// Struktur baru: satu daftar kontak dinamis. Tiap kontak:
-//   { id, type: 'whatsapp'|'telegram'|'link', label, value, message }
-// - whatsapp: value = nomor (digit saja), message = teks otomatis (opsional)
-// - telegram: value = username (tanpa "@")
-// - link:     value = URL lengkap (http/https)
-const DEFAULTS = {
-  contacts: [],
-};
+const MAX_RECOMMENDED = 10;
 
 function newId() {
   return crypto.randomBytes(6).toString('hex');
 }
 
-function readRaw() {
+function readJson(file) {
   try {
-    const txt = fs.readFileSync(FILE, 'utf8');
-    return JSON.parse(txt);
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
-    return {};
+    return null;
   }
+}
+
+function readRaw(siteId) {
+  const own = readJson(fileFor(siteId));
+  if (own) return own;
+  // Migrasi: file lama single-site menjadi milik situs default.
+  if (siteId === DEFAULT_SITE) return readJson(LEGACY_FILE) || {};
+  return {};
 }
 
 // Bersihkan satu kontak sesuai jenisnya. Mengembalikan objek kontak yang
@@ -65,10 +70,35 @@ function sanitizeContact(c) {
   return { id, type, label, value, message };
 }
 
+function sanitizeContacts(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(sanitizeContact).filter(Boolean).slice(0, MAX_CONTACTS);
+}
+
+// Nama brand yang tampil di homepage (logo, tombol, placeholder). Kosong ->
+// pakai nama default situs dari registry.
+function sanitizeBrand(raw, site) {
+  const name = String(raw?.name || '').trim().slice(0, 30);
+  return { name: name || site.name };
+}
+
+// Saran keyword di kotak pencarian, satu string per item.
+function sanitizeRecommended(list, site) {
+  if (!Array.isArray(list)) return [...(site.defaultRecommended || [])];
+  const seen = new Set();
+  const out = [];
+  for (const item of list) {
+    const s = String(item || '').trim().slice(0, 60);
+    if (!s || seen.has(s.toLowerCase())) continue;
+    seen.add(s.toLowerCase());
+    out.push(s);
+    if (out.length >= MAX_RECOMMENDED) break;
+  }
+  return out;
+}
+
 // Migrasi struktur lama (field WA CS 1/2, Telegram, Live Chat) ke daftar kontak.
-// Dipakai sekali saat file settings masih format lama; hasilnya langsung ditulis
-// ulang ke format baru oleh caller.
-function migrateLegacy(raw) {
+function migrateLegacyContacts(raw) {
   const contacts = [];
   const push = (c) => {
     const s = sanitizeContact(c);
@@ -89,32 +119,35 @@ function migrateLegacy(raw) {
   return contacts;
 }
 
-// Ambil settings lengkap (default + tersimpan) dalam format baru. Bila file
-// masih format lama, otomatis dimigrasi ke daftar kontak.
-export function getSettings() {
-  const raw = readRaw();
-  if (Array.isArray(raw.contacts)) {
-    const contacts = raw.contacts.map(sanitizeContact).filter(Boolean).slice(0, MAX_CONTACTS);
-    return { ...DEFAULTS, contacts };
-  }
-  // Format lama → migrasi.
-  return { ...DEFAULTS, contacts: migrateLegacy(raw) };
+// Ambil settings lengkap sebuah situs (default + tersimpan).
+export function getSettings(siteId) {
+  const site = getSite(siteId);
+  const raw = readRaw(site.id);
+  const contacts = Array.isArray(raw.contacts)
+    ? sanitizeContacts(raw.contacts)
+    : migrateLegacyContacts(raw);
+  return {
+    brand: sanitizeBrand(raw.brand, site),
+    recommended: sanitizeRecommended(raw.recommended, site),
+    contacts,
+  };
 }
 
-// Simpan daftar kontak. Menerima { contacts: [...] } dan mengabaikan input lain.
-// Mengembalikan settings final setelah disimpan.
-export function saveSettings(patch = {}) {
-  const current = getSettings();
+// Simpan settings sebuah situs. Field yang tidak dikirim tidak diubah.
+export function saveSettings(siteId, patch = {}) {
+  const site = getSite(siteId);
+  const current = getSettings(site.id);
   const next = { ...current };
 
-  if (Array.isArray(patch.contacts)) {
-    next.contacts = patch.contacts
-      .map(sanitizeContact)
-      .filter(Boolean)
-      .slice(0, MAX_CONTACTS);
+  if (Array.isArray(patch.contacts)) next.contacts = sanitizeContacts(patch.contacts);
+  if (patch.brand && typeof patch.brand === 'object') {
+    next.brand = sanitizeBrand(patch.brand, site);
+  }
+  if (Array.isArray(patch.recommended)) {
+    next.recommended = sanitizeRecommended(patch.recommended, site);
   }
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2), 'utf8');
+  fs.writeFileSync(fileFor(site.id), JSON.stringify(next, null, 2), 'utf8');
   return next;
 }

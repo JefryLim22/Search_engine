@@ -7,6 +7,7 @@ import Pages from './pages/admin/Pages.jsx';
 import Settings from './pages/admin/Settings.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminLayout from './components/AdminLayout.jsx';
+import { SiteProvider } from './lib/site.jsx';
 
 export default function App() {
   return (
@@ -17,7 +18,9 @@ export default function App() {
         path="/admin"
         element={
           <ProtectedRoute>
-            <AdminLayout />
+            <SiteProvider>
+              <AdminLayout />
+            </SiteProvider>
           </ProtectedRoute>
         }
       >

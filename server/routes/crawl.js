@@ -1,13 +1,23 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { startCrawl, crawlState } from '../crawler.js';
+import { startCrawl, getCrawlState } from '../crawler.js';
 import { pagesIndex } from '../meili.js';
+import { resolveSite } from '../sites.js';
 
 const router = Router();
 router.use(requireAuth);
 
-// POST /api/admin/crawl  { seeds, maxPages, maxDepth, sameHostOnly, delayMs }
+// Ambil situs target dari ?site=; 400 bila tidak dikenal.
+function siteOr400(req, res) {
+  const site = resolveSite(req);
+  if (!site) res.status(400).json({ error: 'unknown site' });
+  return site;
+}
+
+// POST /api/admin/crawl?site=  { seeds, maxPages, maxDepth, sameHostOnly, delayMs }
 router.post('/crawl', (req, res) => {
+  const site = siteOr400(req, res);
+  if (!site) return;
   const {
     seeds = [],
     maxPages = 50,
@@ -22,7 +32,7 @@ router.post('/crawl', (req, res) => {
   if (!list.length) return res.status(400).json({ error: 'at least one seed URL is required' });
 
   try {
-    startCrawl({
+    startCrawl(site.id, {
       seeds: list,
       maxPages: Math.min(2000, Math.max(1, Number(maxPages) || 50)),
       maxDepth: Math.min(5, Math.max(0, Number(maxDepth) ?? 2)),
@@ -35,20 +45,28 @@ router.post('/crawl', (req, res) => {
   }
 });
 
-// GET /api/admin/crawl/status
-router.get('/crawl/status', (req, res) => res.json(crawlState));
+// GET /api/admin/crawl/status?site=
+router.get('/crawl/status', (req, res) => {
+  const site = siteOr400(req, res);
+  if (!site) return;
+  res.json(getCrawlState(site.id));
+});
 
-// POST /api/admin/crawl/stop
+// POST /api/admin/crawl/stop?site=
 router.post('/crawl/stop', (req, res) => {
-  crawlState.stopRequested = true;
+  const site = siteOr400(req, res);
+  if (!site) return;
+  getCrawlState(site.id).stopRequested = true;
   res.json({ ok: true });
 });
 
-// GET /api/admin/pages?q=&page=&perPage=  (browse the index)
+// GET /api/admin/pages?site=&q=&page=&perPage=  (browse the index)
 router.get('/pages', async (req, res) => {
+  const site = siteOr400(req, res);
+  if (!site) return;
   const { q = '', page = '1', perPage = '20' } = req.query;
   try {
-    const result = await pagesIndex().search(q, {
+    const result = await pagesIndex(site.id).search(q, {
       page: Math.max(1, Number(page) || 1),
       hitsPerPage: Math.min(100, Number(perPage) || 20),
       sort: ['crawledAt:desc'],
@@ -59,20 +77,24 @@ router.get('/pages', async (req, res) => {
   }
 });
 
-// DELETE /api/admin/pages/:id  (remove one page)
+// DELETE /api/admin/pages/:id?site=  (remove one page)
 router.delete('/pages/:id', async (req, res) => {
+  const site = siteOr400(req, res);
+  if (!site) return;
   try {
-    await pagesIndex().deleteDocument(req.params.id);
+    await pagesIndex(site.id).deleteDocument(req.params.id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE /api/admin/pages  (clear the whole index)
+// DELETE /api/admin/pages?site=  (clear the whole index)
 router.delete('/pages', async (req, res) => {
+  const site = siteOr400(req, res);
+  if (!site) return;
   try {
-    await pagesIndex().deleteAllDocuments();
+    await pagesIndex(site.id).deleteAllDocuments();
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

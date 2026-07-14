@@ -65,29 +65,32 @@ export function contactHref(c) {
 }
 
 export const api = {
-  // public web search
+  // public web search — situs ditentukan server dari subdomain (Host header)
   search: (params) => req(`/search?${new URLSearchParams(params)}`),
 
-  // pengaturan kontak publik (WA & Live Chat)
+  // identitas situs + kontak publik untuk homepage
   settings: () => req('/settings'),
-  // pengaturan kontak (admin)
-  adminSettings: () => req('/admin/settings'),
-  updateSettings: (body) =>
-    req('/admin/settings', { method: 'PUT', body: JSON.stringify(body) }),
 
-  // auth
+  // Endpoint admin bersifat per-situs: semua menerima `site` (cari/beer).
+  sites: () => req('/admin/sites'),
+  adminSettings: (site) => req(`/admin/settings?site=${site}`),
+  updateSettings: (site, body) =>
+    req(`/admin/settings?site=${site}`, { method: 'PUT', body: JSON.stringify(body) }),
+
+  // auth (satu login untuk semua situs)
   login: (body) => req('/admin/login', { method: 'POST', body: JSON.stringify(body) }),
   logout: () => req('/admin/logout', { method: 'POST' }),
   me: () => req('/admin/me'),
-  stats: () => req('/admin/stats'),
+  stats: (site) => req(`/admin/stats?site=${site}`),
 
   // crawl control
-  startCrawl: (body) => req('/admin/crawl', { method: 'POST', body: JSON.stringify(body) }),
-  crawlStatus: () => req('/admin/crawl/status'),
-  stopCrawl: () => req('/admin/crawl/stop', { method: 'POST' }),
+  startCrawl: (site, body) =>
+    req(`/admin/crawl?site=${site}`, { method: 'POST', body: JSON.stringify(body) }),
+  crawlStatus: (site) => req(`/admin/crawl/status?site=${site}`),
+  stopCrawl: (site) => req(`/admin/crawl/stop?site=${site}`, { method: 'POST' }),
 
   // indexed pages
-  pages: (params) => req(`/admin/pages?${new URLSearchParams(params)}`),
-  deletePage: (id) => req(`/admin/pages/${id}`, { method: 'DELETE' }),
-  clearPages: () => req('/admin/pages', { method: 'DELETE' }),
+  pages: (site, params) => req(`/admin/pages?${new URLSearchParams({ ...params, site })}`),
+  deletePage: (site, id) => req(`/admin/pages/${id}?site=${site}`, { method: 'DELETE' }),
+  clearPages: (site) => req(`/admin/pages?site=${site}`, { method: 'DELETE' }),
 };

@@ -1,13 +1,14 @@
 import { MeiliSearch } from 'meilisearch';
 import { config } from './config.js';
+import { SITES, getSite } from './sites.js';
 
 export const client = new MeiliSearch({
   host: config.meiliHost,
   apiKey: config.meiliMasterKey,
 });
 
-// The index stores crawled web pages.
-export const pagesIndex = () => client.index(config.meiliIndex);
+// Index halaman hasil crawl, per situs (cari -> 'pages', beer -> 'pages_beer').
+export const pagesIndex = (siteId) => client.index(getSite(siteId).index);
 
 const INDEX_SETTINGS = {
   searchableAttributes: ['title', 'description', 'content', 'host'],
@@ -28,11 +29,13 @@ const INDEX_SETTINGS = {
 };
 
 export async function ensureIndex() {
-  try {
-    await client.getIndex(config.meiliIndex);
-  } catch {
-    const task = await client.createIndex(config.meiliIndex, { primaryKey: 'id' });
-    await client.waitForTask(task.taskUid);
+  for (const site of Object.values(SITES)) {
+    try {
+      await client.getIndex(site.index);
+    } catch {
+      const task = await client.createIndex(site.index, { primaryKey: 'id' });
+      await client.waitForTask(task.taskUid);
+    }
+    await client.index(site.index).updateSettings(INDEX_SETTINGS);
   }
-  await pagesIndex().updateSettings(INDEX_SETTINGS);
 }

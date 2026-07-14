@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Play, Square, Loader2, Zap, Layers, ChevronDown, ListChecks } from 'lucide-react';
 import { api } from '../../lib/api.js';
+import { useSite } from '../../lib/site.jsx';
 
 /* Ubah teks bebas jadi daftar URL bersih:
    - buang baris kosong & komentar (#)
@@ -29,6 +30,7 @@ function parseDomains(text) {
 }
 
 export default function Crawl() {
+  const { site } = useSite();
   const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const [mode, setMode] = useState('fast'); // 'fast' | 'deep'
@@ -42,21 +44,21 @@ export default function Crawl() {
   const domains = useMemo(() => parseDomains(text), [text]);
 
   const { data: status } = useQuery({
-    queryKey: ['crawl-status'],
-    queryFn: api.crawlStatus,
+    queryKey: ['crawl-status', site],
+    queryFn: () => api.crawlStatus(site),
     refetchInterval: (q) => (q.state.data?.running ? 1000 : 4000),
     retry: false,
   });
 
   const startMutation = useMutation({
-    mutationFn: api.startCrawl,
+    mutationFn: (body) => api.startCrawl(site, body),
     onError: (err) => setError(err.message),
     onSuccess: () => {
       setError('');
-      queryClient.invalidateQueries({ queryKey: ['crawl-status'] });
+      queryClient.invalidateQueries({ queryKey: ['crawl-status', site] });
     },
   });
-  const stopMutation = useMutation({ mutationFn: api.stopCrawl });
+  const stopMutation = useMutation({ mutationFn: () => api.stopCrawl(site) });
 
   // Terapkan preset saat memilih mode (bisa ditimpa di Pengaturan lanjutan).
   function chooseMode(m) {
